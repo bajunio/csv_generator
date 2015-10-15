@@ -7,6 +7,7 @@ class CSVGenerator
     @number_of_columns = ARGV[1].to_i
     @number_of_rows = ARGV[2].to_i
     @output_directory = "#{File.basename($0, ".*")}_output"
+    self.argument_check
   end
 
   def argument_check
@@ -88,4 +89,4 @@ end
 # Driver code....
 
 app = CSVGenerator.new
-app.argument_check
+# app.argument_check
