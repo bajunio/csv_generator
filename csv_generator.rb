@@ -43,7 +43,6 @@ class CSVGenerator
   def exit_text
     buffer(2)
     puts "File has been generated here: #{@output_directory}/#{@output_file}"
-    abort
   end
 
   def create_output_directory
