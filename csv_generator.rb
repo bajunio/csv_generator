@@ -15,10 +15,10 @@ class CSVGenerator
   end
 
   def prompt_user
-    buffer(2)
+    write_newline(2)
     puts "Creation parameters can be passed to the script as arguments like so:"
     puts "#{$0} <output_file> <number_of_columns> <number_of_rows>"
-    buffer(2)
+    write_newline(2)
     puts "Proceeding with prompted questions..."
     puts "Name of output file?"
     @output_file = gets.chomp
@@ -26,22 +26,22 @@ class CSVGenerator
     @number_of_columns = gets.chomp.to_i
     puts "How many rows?"
     @number_of_rows = gets.chomp.to_i
-    buffer
+    write_newline(1)
     run_the_works
   end
 
-  def buffer(int = 1)
-    puts "\n" * int
-  end
+  # def buffer(int = 1)
+  #   puts "\n" * int
+  # end
 
   def creating_text
-    buffer(2)
+    write_newline(2)
     puts "Creating #{@output_file} to contain #{@number_of_columns} columns and #{@number_of_rows} rows..."
-    buffer(2)
+    write_newline(2)
   end
 
   def exit_text
-    buffer(2)
+    write_newline(2)
     puts "File has been generated here: #{@output_directory}/#{@output_file}"
   end
 
@@ -62,13 +62,13 @@ class CSVGenerator
       @number_of_columns.times do
         write_to_file(",data")
       end
-      write_newline
+      write_newline("file")
     end
   end
 
-  def write_newline
-    write_to_file("\n")
-  end
+  # def write_newline
+  #   write_to_file("\n")
+  # end
 
   def write_to_file(string)
     File.open("#{@output_directory}/#{@output_file}", 'a+') { |f| f.write(string) }
@@ -78,10 +78,18 @@ class CSVGenerator
     self.creating_text
     self.create_output_directory
     self.write_columns
-    self.write_newline
+    self.write_newline("file")
     self.write_rows
     self.exit_text
   end
+
+def write_newline(var)
+  if var.is_a?(String)
+    write_to_file("\n")
+  else
+    puts "\n" * var
+  end
+end
 
 end
 
