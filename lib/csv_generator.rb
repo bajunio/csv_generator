@@ -2,6 +2,46 @@
 
 class CSVGenerator
 
+  # So why the (!) bang? It will indicate to users that this is an
+  # actionable method, used to parse CLI arguments, similar to `OptionParser`
+  #
+  # By using this method, we can refactor it later on if we decided to
+  # use a proper parser.  For now, let's try ARGV, then prompt the user.
+  #
+  # This may look a little weird, but essentially we're deferring arg
+  # parsing validation to parse_argv, or if that returns nil, we call
+  # prompt_user.  It's essentially what you had earlier, but is a
+  # little more 'Ruby'.
+  #
+  # (ARGV.size != 3) ? prompt_user : parge_argv )
+  def self.parse!    
+    new( parse_argv || prompt_user )
+  end
+
+  # We'll move up the instance method prompt_user and make some slight
+  # changes.  For now I'm removed the buffer method all together and
+  # just settled for newlines.
+  def self.prompt_user
+    args = {}
+    puts "Creation parameters can be passed to the script as arguments like so:"
+    puts "#{$0} <output_file> <number_of_columns> <number_of_rows>\n\n"
+    puts "Proceeding with prompted questions..."
+    puts "Name of output file?"
+    args[:out] = gets.chomp
+    puts "How many columns?"
+    args[:cols] = gets.chomp.to_i
+    puts "How many rows?"
+    args[:rows] = gets.chomp.to_i
+    puts # newline
+    return args
+  end
+
+  # Return nil if ARGV wasn't passed
+  def self.parse_argv
+    return if ARGV.size != 3
+    {out: ARGV[0], cols: ARGV[1], rows: ARGV[2]}
+  end  
+
   ##
   # Pass in a hash as args
   # Alternatively you could set specific args, like
@@ -27,6 +67,8 @@ class CSVGenerator
     @number_of_columns = opts[:cols].to_i
     @number_of_rows    = opts[:rows].to_i
     @output_directory  = "#{File.basename($0, ".*")}_output"
+
+    run_the_works
   end
 
   # So now that we aren't sourcing ARGV for parameters and we're redefined
@@ -41,34 +83,11 @@ class CSVGenerator
     #   (ARGV.size != 3) ? prompt_user : run_the_works
   end
 
-  def prompt_user
-    buffer(2)
-    puts "Creation parameters can be passed to the script as arguments like so:"
-    puts "#{$0} <output_file> <number_of_columns> <number_of_rows>"
-    buffer(2)
-    puts "Proceeding with prompted questions..."
-    puts "Name of output file?"
-    @output_file = gets.chomp
-    puts "How many columns?"
-    @number_of_columns = gets.chomp.to_i
-    puts "How many rows?"
-    @number_of_rows = gets.chomp.to_i
-    buffer
-    run_the_works
-  end
-
-  def buffer(int = 1)
-    puts "\n" * int
-  end
-
   def creating_text
-    buffer(2)
-    puts "Creating #{@output_file} to contain #{@number_of_columns} columns and #{@number_of_rows} rows..."
-    buffer(2)
+    puts "\n\nCreating #{@output_file} to contain #{@number_of_columns} columns and #{@number_of_rows} rows...\n\n"
   end
 
   def exit_text
-    buffer(2)
     puts "File has been generated here: #{@output_directory}/#{@output_file}"
   end
 
@@ -158,7 +177,12 @@ class CSVGenerator
 
 end
 
-# Driver code....
-
-app = CSVGenerator.new
-# app.argument_check
+##
+# Gunna start off by how much I *hate* when folks do this, but I
+# wanted to leave a comment so you can see how it would work if you
+# really wanted to keep the bin scripts and the library scripts in the
+# same file.
+#
+#    if __FILE__==$0
+#      CSVGenerator.parse!
+#    end
