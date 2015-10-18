@@ -2,6 +2,18 @@
 
 class CSVGenerator
 
+  # Let's declare these variables as read only functions. This way,
+  # when you declare `@output_file = opts[:out]` inside of initialize,
+  # users of that instance can still call a method to access that variable.
+  #
+  #    gen = CSVGenerator.new(opts)
+  #    puts "My Output file has #{gen.number_of_columns} columns in #{gen.output_file}"
+  #
+  # You'll also note that inside of your instance methods, you can
+  # replace `@output_file` with `output_file` simply because of this
+  # line.  Pretty cool, huh!
+  attr_reader :output_file, :number_of_columns, :number_of_rows
+
   # So why the (!) bang? It will indicate to users that this is an
   # actionable method, used to parse CLI arguments, similar to `OptionParser`
   #
@@ -14,8 +26,14 @@ class CSVGenerator
   # little more 'Ruby'.
   #
   # (ARGV.size != 3) ? prompt_user : parge_argv )
-  def self.parse!    
+  def self.parse!
     new( parse_argv || prompt_user )
+  end
+
+  # Return nil if ARGV wasn't passed
+  def self.parse_argv
+    return if ARGV.size != 3
+    {out: ARGV[0], cols: ARGV[1], rows: ARGV[2]}
   end
 
   # We'll move up the instance method prompt_user and make some slight
@@ -36,11 +54,9 @@ class CSVGenerator
     return args
   end
 
-  # Return nil if ARGV wasn't passed
-  def self.parse_argv
-    return if ARGV.size != 3
-    {out: ARGV[0], cols: ARGV[1], rows: ARGV[2]}
-  end  
+  # Let's declare what the user can and cannot call by making some
+  # methods private.  Specifically parse_argv and prompt_user.
+  private_class_method :prompt_user, :parse_argv
 
   ##
   # Pass in a hash as args
@@ -66,68 +82,22 @@ class CSVGenerator
     @output_file       = opts[:out]
     @number_of_columns = opts[:cols].to_i
     @number_of_rows    = opts[:rows].to_i
-    @output_directory  = "#{File.basename($0, ".*")}_output"
+
+    # Let's be lazy about this and create a method.
+    # @output_directory  = "#{File.basename($0, ".*")}_output"
 
     run_the_works
   end
 
-  # So now that we aren't sourcing ARGV for parameters and we're redefined
-  # how we call `CSVGenerator.new`, I'm going to deprecate this method.
-  #
-  # Since `#argument_check` was called inside of initialize, users
-  # would rarely have called it, if ever, but because it was defined as a public method
-  # I'm going to simple deprecate it until the next release.
-  #
-  def argument_check
-    warn "[DEPRECATION] `argument_check` is deprecated and will be removed in future release"
-    #   (ARGV.size != 3) ? prompt_user : run_the_works
+  # We want the full path, it'll just be easier to deal with later and
+  # prevent any "WHERE'S MY #*@!ing file?!" bugs
+  def output_directory
+    @output_directory ||= File.absolute_path(set_output_dir)
   end
 
-  def creating_text
-    puts "\n\nCreating #{@output_file} to contain #{@number_of_columns} columns and #{@number_of_rows} rows...\n\n"
-  end
-
-  def exit_text
-    puts "File has been generated here: #{@output_directory}/#{@output_file}"
-  end
-
-  def create_output_directory
-    Dir.mkdir(@output_directory) unless File.exists?(@output_directory)
-  end
-
-  def write_columns
-    puts "Writing columns..."
-    @number_of_columns.times do |col|
-      write_to_file(",#{col}_Column")
-    end
-  end
-
-  def write_rows
-    puts "Writing rows..."
-    @number_of_rows.times do
-      @number_of_columns.times do
-        write_to_file(",data")
-      end
-      write_newline
-    end
-  end
-
-  def write_newline
-    write_to_file("\n")
-  end
-
-  def write_to_file(string)
-    File.open("#{@output_directory}/#{@output_file}", 'a+') { |f| f.write(string) }
-  end
-
-  def run_the_works
-    self.creating_text
-    self.create_output_directory
-    self.write_columns
-    self.write_newline
-    self.write_rows
-    self.exit_text
-  end
+  # Let's mark everything after here as `private`, so users know that
+  # they only really need to call `CSVGenerator.new(opts)`
+  private
 
   # Let's cycle through the keys we require and select those key
   # values equal nil in the opts hash.  Essentially:
@@ -147,7 +117,6 @@ class CSVGenerator
     return if (missing = [:out, :rows, :cols].select{|a| opts[a].nil? }).empty?
     usage(missing)
   end
-
 
   # Params are an array of missing parameters passed as a splat (*).
   # All splat does is says "you can pass me as any individual
@@ -175,6 +144,79 @@ class CSVGenerator
     exit 1
   end
 
+  # Going to remove the `self` reference `#initialize` for more info.
+  def run_the_works
+    creating_text
+    create_output_directory
+    write_columns
+    write_newline
+    write_rows
+    exit_text
+  end
+
+  # If the user inputs a absolute path to their file
+  # (/home/user/csv.out) then let's use that.
+  def set_output_dir
+    # If they've used a relative path ("csv.out"), let's return the
+    # default you used originally in initialize
+    if (dir = File.dirname(output_file)) == "."
+      return "#{File.basename($0, ".*")}_output"
+    end
+    return dir
+  end
+
+  # So now that we aren't sourcing ARGV for parameters and we're redefined
+  # how we call `CSVGenerator.new`, I'm going to deprecate this method.
+  #
+  # Since `#argument_check` was called inside of initialize, users
+  # would rarely have called it, if ever, but because it was defined as a public method
+  # I'm going to simple deprecate it until the next release.
+  #
+  # Now that `#argument_check` is private, I'm going to flat out remove it.
+  # def argument_check; end
+
+
+  ##
+  # :section: Output formatting
+  #
+  # Everything else is to help format text
+
+  def creating_text
+    puts "\n\nCreating #{output_file} to contain #{number_of_columns} columns and #{number_of_rows} rows...\n\n"
+  end
+
+  def exit_text
+    puts "File has been generated here: #{output_directory}/#{output_file}"
+  end
+
+  def write_columns
+    puts "Writing columns..."
+    number_of_columns.times do |col|
+      write_to_file(",#{col}_Column")
+    end
+  end
+
+  def write_rows
+    puts "Writing rows..."
+    number_of_rows.times do
+      number_of_columns.times do
+        write_to_file(",data")
+      end
+      write_newline
+    end
+  end
+
+  def write_newline
+    write_to_file("\n")
+  end
+
+  def write_to_file(string)
+    File.open("#{output_directory}/#{output_file}", 'a+') { |f| f.write(string) }
+  end
+
+  def create_output_directory
+    Dir.mkdir(output_directory) unless File.exists?(output_directory)
+  end
 end
 
 ##
