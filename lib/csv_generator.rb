@@ -1,5 +1,3 @@
-#!/usr/bin/env ruby
-
 class CSVGenerator
 
   # Let's declare these variables as read only functions. This way,
