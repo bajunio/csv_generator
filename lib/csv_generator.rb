@@ -87,6 +87,13 @@ class CSVGenerator
     run_the_works
   end
 
+  # let's declare a method, `filepath` to fix a bug introduced by the
+  # very first commit! shame, shame. It will give a one-stop method
+  # for the absoluate path to the file.
+  def filename
+    @filename ||= set_filename
+  end
+
   # We want the full path, it'll just be easier to deal with later and
   # prevent any "WHERE'S MY #*@!ing file?!" bugs
   def output_directory
@@ -142,7 +149,7 @@ class CSVGenerator
     exit 1
   end
 
-  # Going to remove the `self` reference `#initialize` for more info.
+  # Going to remove the `self` reference see `#initialize` for more info.
   def run_the_works
     creating_text
     create_output_directory
@@ -163,6 +170,18 @@ class CSVGenerator
     return dir
   end
 
+  # If the user passes in an absolute path initially, then let's use it!
+  #
+  # This is actually a super simple return that I probably could have
+  # done inside of `#filename`.  I choose to create a method instead
+  # simply because it might give us some flexibility later on down the
+  # road. Even if it doesn't nothing is really lost, with the added
+  # benefit of recreating the source of truth later on with
+  # `@filename = nil` and calling `filename` again
+  def set_filename
+    return "#{output_directory}/#{File.basename(output_file)}"
+  end
+
   # So now that we aren't sourcing ARGV for parameters and we're redefined
   # how we call `CSVGenerator.new`, I'm going to deprecate this method.
   #
@@ -173,6 +192,18 @@ class CSVGenerator
   # Now that `#argument_check` is private, I'm going to flat out remove it.
   # def argument_check; end
 
+  ##
+  # :section: IOWriters
+  #
+  # This section will create and write to disk.
+
+  def write_to_file(string)
+    File.open(filename, 'a+') { |f| f.write(string) }
+  end
+
+  def create_output_directory
+    Dir.mkdir(output_directory) unless File.exists?(output_directory)
+  end
 
   ##
   # :section: Output formatting
@@ -184,7 +215,7 @@ class CSVGenerator
   end
 
   def exit_text
-    puts "File has been generated here: #{output_directory}/#{output_file}"
+    puts "File has been generated here: #{filename}"
   end
 
   def write_columns
@@ -206,14 +237,6 @@ class CSVGenerator
 
   def write_newline
     write_to_file("\n")
-  end
-
-  def write_to_file(string)
-    File.open("#{output_directory}/#{output_file}", 'a+') { |f| f.write(string) }
-  end
-
-  def create_output_directory
-    Dir.mkdir(output_directory) unless File.exists?(output_directory)
   end
 end
 
