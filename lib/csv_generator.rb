@@ -69,7 +69,7 @@ class CSVGenerator
     # aren't gunna work anyways.
     #
     # I've decided to rename `#argument_check` to `#validate_args`.
-    # Why? Well, it sounds more idomatic. Rails calls it's parameter check
+    # Why? Well, it sounds more idomatic. Rails calls its parameter check
     # classes `Validators` for example.
     #
     # Also want to briely 'explain thy `self`'. There's usually no
@@ -89,7 +89,7 @@ class CSVGenerator
 
   # let's declare a method, `filepath` to fix a bug introduced by the
   # very first commit! shame, shame. It will give a one-stop method
-  # for the absoluate path to the file.
+  # for the absolute path to the file.
   def filename
     @filename ||= set_filename
   end
@@ -104,8 +104,8 @@ class CSVGenerator
   # they only really need to call `CSVGenerator.new(opts)`
   private
 
-  # Let's cycle through the keys we require and select those key
-  # values equal nil in the opts hash.  Essentially:
+  # Let's cycle through the keys we require and select those keys with a
+  # value equal to nil in the opts hash.  Essentially:
   #
   #     required_args = [:out, :rows, :cols]
   #     missing = []
@@ -118,32 +118,38 @@ class CSVGenerator
   # Then, if `missing.any?` we know that some arguments were not
   # passed and we should raise an exception.  Rather than do all that
   # here, we'll call instance method `#usage` and pass it the missing args.
+  #
+  # So now I've added additional validation, ensuring that rows are
+  # cols are indeed valid non-zero integers. You can see how as
+  # arguments grow, a proper arg parser begins to make more and more
+  # sense.
   def validate_args(opts={})
-    return if (missing = [:out, :rows, :cols].select{|a| opts[a].nil? }).empty?
+    return if (missing = [:rows, :cols].select{ |a| opts[a].to_i <= 0 }).empty?
+    return if (missing ||= [:out, :rows, :cols].select{|a| opts[a].nil? }).empty?
     usage(missing)
   end
 
   # Params are an array of missing parameters passed as a splat (*).
-  # All splat does is says "you can pass me as any individual
-  # arguments as your want and I'll pretend like you passed me an
-  # array instead".  Here's an illustration:
+  # All splat says is "you can pass me as many individual arguments as
+  # you want and I'll pretend like you passed me an array instead".
+  # Here's an illustration:
   #
   #    usage_args(:out, :cols, :rows)
   #
   #    def usage_args(arg1, arg2, arg3)
   #        arg4 = :format
-  #        usagesplat(arg1, arg2, arg3, arg4)
+  #        usage_splat(arg1, arg2, arg3, arg4, :quiet)
   #    end
   #
   #    def usage_splat(*args)
   #        puts args.join(', ')
-  #        # :out, :cols, :rows, :format
+  #        # :out, :cols, :rows, :format, :quiet
   #    end
   #
   # By calling exit 1, you're letting users know that there was an error.
   def usage(*args)
     if args.any?
-      puts 'Missing argument' + (args.size > 1 ? 's' : '') + ': ' + args.join(',')
+      puts 'Missing argument' + (args.size > 1 ? 's' : '') + ': ' + args.join(', ')
     end
     puts "Usage: #{$0} <output_file> <number_of_columns> <number_of_rows>"
     exit 1
@@ -159,7 +165,7 @@ class CSVGenerator
     exit_text
   end
 
-  # If the user inputs a absolute path to their file
+  # If the user inputs an absolute path to their file
   # (/home/user/csv.out) then let's use that.
   def set_output_dir
     # If they've used a relative path ("csv.out"), let's return the
@@ -175,7 +181,7 @@ class CSVGenerator
   # This is actually a super simple return that I probably could have
   # done inside of `#filename`.  I choose to create a method instead
   # simply because it might give us some flexibility later on down the
-  # road. Even if it doesn't nothing is really lost, with the added
+  # road. Even if it doesn't, nothing is really lost, with the added
   # benefit of recreating the source of truth later on with
   # `@filename = nil` and calling `filename` again
   def set_filename
@@ -239,13 +245,3 @@ class CSVGenerator
     write_to_file("\n")
   end
 end
-
-##
-# Gunna start off by how much I *hate* when folks do this, but I
-# wanted to leave a comment so you can see how it would work if you
-# really wanted to keep the bin scripts and the library scripts in the
-# same file.
-#
-#    if __FILE__==$0
-#      CSVGenerator.parse!
-#    end
